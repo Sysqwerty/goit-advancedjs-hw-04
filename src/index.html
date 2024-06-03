@@ -10,13 +10,14 @@
 </head>
 
 <body>
-  <select class="breed-select hide">
-    <option value="" selected disabled>Select Breed</option>
-  </select>
-  <span class="loader"></span>
-  <div class="cat-info">
+  <form class="search-form" id="search-form">
+    <input type="text" name="searchQuery" autocomplete="off" placeholder="Search images..." />
+    <button type="submit">Search</button>
+  </form>
+  <div class="gallery"></div>
+  <span class="loader hide"></span>
 
-    <script src="./js/index.js" type="module"></script>
+  <script src="./js/index.js" type="module"></script>
 </body>
 
 </html>

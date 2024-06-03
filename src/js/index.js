@@ -1,87 +1,145 @@
-import { fetchBreeds, fetchCatByBreed } from './cat-api';
-import Choices from 'choices.js';
-import 'choices.js/public/assets/styles/choices.min.css';
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
+import { fetchHits } from './api';
+import { selectors, controls } from './constants';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
-const selectors = {
-  loader: document.querySelector('.loader'),
-  catInfo: document.querySelector('.cat-info'),
-  select: document.querySelector('.breed-select'),
-};
+const gallery = new SimpleLightbox('.gallery a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
 
-const toastOptions = {
-  class: 'promisesToast',
-  position: 'topRight',
-  close: false,
-  timeout: 3000,
-};
+gallery.on('error.simplelightbox', function (e) {
+  console.log(e);
+});
 
-/**
- * IIFE function, adds options to select UI element on page load
- */
-(() => {
-  fetchBreeds()
-    .then(res => {
-      selectors.select.classList.remove('hide');
+selectors.form.addEventListener('submit', handlerSubmit);
+window.addEventListener('scroll', onScroll);
 
-      const markUp = res.data
-        .map(({ id, name }) => {
-          return `
-    <option value=${id}>${name}</option>
-  `;
-        })
-        .join('');
+function onScroll() {
+  if (
+    window.scrollY + window.innerHeight >=
+    document.documentElement.scrollHeight - 50
+  ) {
+    handlerLoadMore();
+  }
+}
 
-      selectors.select.insertAdjacentHTML('afterbegin', markUp);
-      new Choices(selectors.select, {
-        searchEnabled: true,
-      });
-    })
-    .catch(() => {
-      iziToast.error({
-        message: `❌ Oops! Something went wrong! Try reloading the page!`,
-        ...toastOptions,
-      });
-    })
-    .finally(() => {
-      selectors.loader.classList.add('hide');
-    });
-})();
+async function handlerSubmit(evt) {
+  evt.preventDefault();
+  selectors.gallery.textContent = '';
 
-selectors.select.addEventListener('change', handlerSelect);
+  const searchQuery = evt.target.elements.searchQuery.value;
 
-function handlerSelect() {
-  selectors.catInfo.classList.add('hide');
+  controls.searchQuery = searchQuery;
+
+  if (!searchQuery) {
+    showToast('Please enter a search query.', 'error');
+    return;
+  }
+
+  controls.receivedHits = 0;
+  controls.totalHits = 0;
+  controls.page = 1;
+
+  try {
+    await loadData();
+    controls.totalHits ??
+      showToast(`Hooray! We found ${controls.totalHits} images.`, 'success');
+    gallery.refresh();
+  } catch (error) {
+    showToast(
+      'Sorry, there are no images matching your search query. Please try again.',
+      'error'
+    );
+  } finally {
+    evt.target.elements.searchQuery.value = '';
+  }
+}
+
+async function loadData() {
   selectors.loader.classList.remove('hide');
+  if (controls.isLoading) return;
+  controls.isLoading = true;
 
-  fetchCatByBreed(selectors.select.value)
-    .then(res => {
-      const [
-        {
-          url,
-          breeds: [{ name, description, temperament }],
-        },
-      ] = res.data;
+  try {
+    const { totalHits, hits } = await fetchHits(controls.searchQuery);
+    controls.receivedHits += hits.length;
+    controls.totalHits = totalHits;
 
-      const markUp = `
-        <img src="${url}" alt="${name}">
-        <div class="cat-info-text">
-        <h2>${name}</h2>
-        <p>${description}</p>
-        <p><span>Temperament</span>: ${temperament}</p>
+    renderImages(hits);
+    gallery.refresh();
+
+    console.log('hits received: ', controls.receivedHits);
+    console.log('total hits: ', totalHits);
+
+    !controls.receivedHits
+      ? showToast(
+          'Sorry, there are no images matching your search query. Please try again.',
+          'error'
+        )
+      : controls.receivedHits >= totalHits &&
+        showToast(
+          `We're sorry, but you've reached the end of search results.`,
+          'info'
+        );
+  } catch (error) {
+    showToast('Error fetching data. Please try again.', 'error');
+  } finally {
+    selectors.loader.classList.add('hide');
+    controls.isLoading = false;
+  }
+}
+
+async function handlerLoadMore() {
+  controls.page += 1;
+  await loadData();
+
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+}
+
+function renderImages(images) {
+  const markup = images
+    .map(
+      ({
+        largeImageURL,
+        webformatURL,
+        tags,
+        likes,
+        views,
+        comments,
+        downloads,
+      }) => `
+      <div class="photo-card">
+        <a href="${largeImageURL}" class="card-link">
+          <img src="${webformatURL}" alt="${tags}" class="card-image" loading="lazy" />
+        </a>
+        <div class="info">
+          <p class="info-item"><b>Likes</b> ${likes}</p>
+          <p class="info-item"><b>Views</b> ${views}</p>
+          <p class="info-item"><b>Comments</b> ${comments}</p>
+          <p class="info-item"><b>Downloads</b> ${downloads}</p>
         </div>
-        `;
-      selectors.catInfo.innerHTML = markUp;
-    })
-    .catch(() => {
-      iziToast.error({
-        message: `❌ Oops! Something went wrong! Try reloading the page!`,
-        ...toastOptions,
-      });
-    })
-    .finally(() => {
-      selectors.catInfo.classList.remove('hide');
-      selectors.loader.classList.add('hide');
-    });
+      </div>
+    `
+    )
+    .join('');
+
+  selectors.gallery.insertAdjacentHTML('beforeend', markup);
+}
+
+function showToast(message, type = 'info') {
+  iziToast[type]({
+    message: message,
+    position: 'topRight',
+    timeout: 3000,
+  });
 }
