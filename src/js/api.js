@@ -1,14 +1,13 @@
 import axios from 'axios';
-import { controls } from './constants';
+import { controls, keys, BASE_URL } from './constants';
 
-axios.defaults.headers.common['x-api-key'] =
-  'live_nOdnL3Dj9jjF4zVLjteozldoqmiVUxxCRsrlPoRVyonLQDm4DFuaUNiaRzafsnXC';
+axios.defaults.headers.common['x-api-key'] = keys.AXIOS_KEY;
 axios.defaults.headers = ['Access-Control-Allow-Origin'];
 
-export async function fetchHits(searchQuery) {
+export async function fetchHits() {
   const queryParams = new URLSearchParams({
-    key: '44202133-14fac6110a8eccaaec992feaf',
-    q: searchQuery,
+    key: keys.API_KEY,
+    q: controls.searchQuery,
     image_type: 'photo',
     orientation: 'horizontal',
     safesearch: true,
@@ -16,9 +15,7 @@ export async function fetchHits(searchQuery) {
     page: controls.page,
   });
 
-  const response = await axios.get(
-    `https://pixabay.com/api/?${queryParams.toString()}`
-  );
+  const response = await axios.get(`${BASE_URL}?${queryParams.toString()}`);
 
   const data = await response.data;
   console.log('data:\n', data);

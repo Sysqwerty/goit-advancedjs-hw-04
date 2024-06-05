@@ -40,6 +40,8 @@ body {
   font-size: 20px;
   font-weight: 600;
   cursor: pointer;
+  outline: none;
+  background: rgb(246, 248, 95);
 }
 
 .gallery {
@@ -93,6 +95,15 @@ body {
 }
 
 .loader {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.loader-icon {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -102,7 +113,7 @@ body {
   box-sizing: border-box;
   animation: rotation 1s linear infinite;
 }
-.loader::after {
+.loader-icon::after {
   content: '';
   box-sizing: border-box;
   position: absolute;
