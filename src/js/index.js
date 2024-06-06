@@ -34,7 +34,8 @@ async function onFormSubmit(evt) {
   }
 
   const formData = new FormData(evt.currentTarget);
-  controls.searchQuery = formData.get('searchQuery');
+  controls.searchQuery = formData.get('searchQuery').trim();
+  selectors.form.reset();
 
   if (!controls.searchQuery) {
     showToast('Please enter a search query.', 'error');
@@ -49,7 +50,6 @@ async function onFormSubmit(evt) {
 
   selectors.gallery.innerHTML = '';
   selectors.loader.classList.remove('hide');
-  selectors.form.reset();
 
   await loadData(true);
 }
@@ -103,11 +103,13 @@ async function loadData(firstRender = false) {
       controls.isScrollListenerAdded = false;
     }
 
-    if (controls.receivedHits >= totalHits && !firstRender) {
-      showToast(
-        `We're sorry, but you've reached the end of search results.`,
-        'info'
-      );
+    if (controls.receivedHits >= totalHits) {
+      setTimeout(() => {
+        showToast(
+          `We're sorry, but you've reached the end of search results.`,
+          'info'
+        );
+      }, 1000);
       window.removeEventListener('scroll', onScroll);
       controls.isScrollListenerAdded = false;
     }
